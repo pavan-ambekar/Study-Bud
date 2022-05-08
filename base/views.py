@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm
 from .models import Message, Room, Topic
-from .forms import RoomForm
+from .forms import RoomForm,Userform
 
 
 # Create your views here.
@@ -72,7 +72,7 @@ def home(request):
         Q(name__icontains=q) | Q(description__icontains=q)
     )
 
-    topics = Topic.objects.all()
+    topics = Topic.objects.all()[0:5]
     room_count = rooms.count()
     room_messages = Message.objects.filter(Q(room__topic__name__icontains=q))
 
@@ -179,6 +179,34 @@ def deleteMessage(request, pk):
     context = {'obj': message}
     return render(request, 'base/delete.html', context)
 
+
+@login_required(login_url='login')
+def updateUser(request):
+    user = request.user
+    form = Userform(instance=user)
+    
+    if request.method=='POST':
+        form = Userform(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            return redirect('user-profile', pk=user.id)
+    context = {'form':form}
+    return render(request, 'base/update-user.html', context)
+
+@login_required(login_url='login')
+def topicPage(request):
+    q = request.GET.get('q') if request.GET.get('q') != None else ''
+    
+    topics =Topic.objects.filter(name__icontains=q)
+    context={'topics':topics}
+    return render(request,'base/topics.html',context)
+
+@login_required(login_url='login')
+def activityPage(request):
+    room_messages = Message.objects.all()
+    context={'room_messages':room_messages}
+    return render(request,'base/activity.html',context)
+    
 
 def about(request):
     return render(request, 'base/about.html')
